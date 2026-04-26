@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>跨境物流提成系统 | 平均提成(排除低提成)</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 24px 20px;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            padding: 24px 28px 36px 28px;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #1e3c72, #2b4c7c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .sub {
+            color: #475569;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            margin: 12px 0 24px 0;
+            font-size: 0.95rem;
+            background: #f8fafc;
+            border-radius: 14px;
+            line-height: 1.4;
+        }
+        .stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 28px;
+            justify-content: space-between;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 160px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 24px;
+            padding: 16px 20px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+        }
+        .stat-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569;
+            letter-spacing: 1px;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f3b5c;
+            line-height: 1.2;
+        }
+        .stat-unit {
+            font-size: 0.9rem;
+            font-weight: normal;
+            color: #64748b;
+            margin-left: 4px;
+        }
+        .avg-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 28px;
+            justify-content: space-between;
+        }
+        .two-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        .employee-panel, .import-panel {
+            flex: 1;
+            min-width: 280px;
+            background: #f9f9fc;
+            border-radius: 24px;
+            padding: 18px 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+            align-items: flex-end;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 100px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 4px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 14px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+        }
+        .btn {
+            border: none;
+            background: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: #1e4a76;
+            border-color: #1e4a76;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0f3b5e;
+            transform: translateY(-1px);
+        }
+        .btn-outline {
+            border-color: #3b82f6;
+            color: #1e4a76;
+        }
+        .btn-outline:hover {
+            background: #eef4ff;
+        }
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+        }
+        .btn-danger {
+            border-color: #dc2626;
+            color: #b91c1c;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+            justify-content: space-between;
+        }
+        .file-label {
+            background: #f1f5f9;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            border: 1px dashed #94a3b8;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 650px;
+        }
+        th {
+            background: #f1f5f9;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+            color: #0c4a6e;
+        }
+        td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background-color: #fafcff;
+        }
+        .total-row {
+            background: #fefce8;
+            font-weight: 600;
+            border-top: 2px solid #d1dbe8;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 0 6px;
+        }
+        .delete-btn:hover {
+            color: #b91c1c;
+        }
+        .employee-delete {
+            background: none;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .footer-note {
+            margin-top: 28px;
+            font-size: 0.8rem;
+            color: #4b5563;
+            text-align: center;
+            border-top: 1px solid #e9edf2;
+            padding-top: 18px;
+        }
+        .badge {
+            background: #dbeafe;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .formula-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 12px 18px;
+            margin-bottom: 18px;
+            border: 1px solid #e2e8f0;
+        }
+        .alert-warning {
+            background: #fff3e0;
+            border-left: 4px solid #f97316;
+            padding: 10px 14px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            font-size: 0.8rem;
+        }
+        .employee-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .employee-table td, .employee-table th {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        @media (max-width: 780px) {
+            .container { padding: 16px; }
+            .form-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📦 跨境物流 · 智能提成系统</h1>
+    <div class="sub">✨ 自动识别并添加新员工 | 按发货人聚合订单 | 实时统计平均提成（排除提成低于20元的数据）</div>
+
+    <div class="formula-card">
+        <p><strong>📐 最新提成公式（2025年4月更新）</strong></p>
+        <p>👩 女孩子：<strong>提成 = 单量 × 0.035 + 收益 × 4%</strong> &nbsp;&nbsp;|&nbsp;&nbsp; 👨 男孩子：<strong>提成 = 单量 × 0.06 + 收益 × 4%</strong></p>
+        <p class="badge" style="background:#e6f7e6;">💡 收益基数：女4% / 男4%；单量基数：女0.035元/单，男0.06元/单</p>
+    </div>
+
+    <!-- 仓库统计卡片 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>📦 仓库总单量</h3>
+            <div class="stat-number"><span id="totalQty">0</span><span class="stat-unit">单</span></div>
+        </div>
+        <div class="stat-card">
+            <h3>💰 仓库总收益</h3>
+            <div class="stat-number"><span id="totalRevenue">0</span><span class="stat-unit">元</span></div>
+        </div>
+        <div class="stat-card">
+            <h3>🏆 总提成金额</h3>
+            <div class="stat-number"><span id="totalCommissionStat">0</span><span class="stat-unit">元</span></div>
+        </div>
+    </div>
+
+    <!-- 平均提成统计卡片 (排除提成<20元) -->
+    <div class="avg-stats">
+        <div class="stat-card">
+            <h3>👩 女孩子平均提成</h3>
+            <div class="stat-number"><span id="avgGirlCommission">0</span><span class="stat-unit">元</span></div>
+            <div style="font-size:0.7rem; color:#64748b;">* 只统计提成≥20元</div>
+        </div>
+        <div class="stat-card">
+            <h3>👨 男孩子平均提成</h3>
+            <div class="stat-number"><span id="avgBoyCommission">0</span><span class="stat-unit">元</span></div>
+            <div style="font-size:0.7rem; color:#64748b;">* 只统计提成≥20元</div>
+        </div>
+        <div class="stat-card">
+            <h3>📊 总平均提成</h3>
+            <div class="stat-number"><span id="avgTotalExclude">0</span><span class="stat-unit">元</span></div>
+            <div style="font-size:0.7rem; color:#64748b;">* 排除佩佩、客服小蔡、小何、般若、侯总，且提成≥20元</div>
+        </div>
+    </div>
+
+    <!-- 左右两栏 -->
+    <div class="two-columns">
+        <div class="employee-panel">
+            <h3 style="margin:0 0 12px 0; font-size:1.2rem;">👥 打包员管理</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="empName" placeholder="例: 新员工">
+                </div>
+                <div class="form-group">
+                    <label>性别</label>
+                    <select id="empGender">
+                        <option value="女">女</option>
+                        <option value="男">男</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex:0 0 auto;">
+                    <button id="addEmployeeBtn" class="btn btn-primary btn-sm">➕ 添加</button>
+                </div>
+            </div>
+            <div class="table-wrapper" style="max-height: 300px; overflow-y: auto;">
+                <table class="employee-table">
+                    <thead><tr><th>姓名</th><th>性别</th><th style="width:40px">操作</th></tr></thead>
+                    <tbody id="employeeListBody"><tr><td colspan="3">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="alert-warning" style="margin-top:12px;">
+                💡 提示：导入Excel时，系统会根据「发货人」自动匹配或<strong>自动添加新员工</strong>（性别默认“女”，可随时修改）。<br>
+                ✅ 预设员工名单（男孩/女孩）已内置，新名字会自动扩展。
+            </div>
+        </div>
+
+        <div class="import-panel">
+            <h3 style="margin:0 0 12px 0; font-size:1.2rem;">⚙️ 导入订单 & 提成计算</h3>
+            <div class="toolbar" style="margin-bottom: 8px;">
+                <label class="file-label btn-outline">
+                    📂 导入 Excel (发货人+合计费用)
+                    <input type="file" id="uploadExcel" accept=".xlsx, .xls, .csv">
+                </label>
+                <button id="exportBtn" class="btn btn-primary">⬇️ 导出结果 Excel</button>
+                <button id="downloadTemplateBtn" class="btn btn-outline">📎 下载模板</button>
+                <button id="clearDataBtn" class="btn btn-outline btn-danger">🗑️ 清空提成数据</button>
+            </div>
+            <div class="badge" style="background:#eef2ff;">📌 识别列：<strong>发货人/姓名</strong> → 员工姓名；<strong>合计费用/收益</strong> → 收益</div>
+            <div class="badge" style="background:#eef2ff; margin-top:6px;">✅ 自动按员工合并单量（订单数）与收益总额，新员工自动添加（默认性别女）。</div>
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>手动增加提成 (选择员工)</label>
+                    <select id="manualEmployeeSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label>增加单量</label>
+                    <input type="number" id="manualQty" value="0" step="1" min="0">
+                </div>
+                <div class="form-group">
+                    <label>增加收益(元)</label>
+                    <input type="number" id="manualRevenue" value="0" step="10" min="0">
+                </div>
+                <div class="form-group" style="flex:0 0 auto;">
+                    <button id="addManualBtn" class="btn btn-primary btn-sm">➕ 累加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提成数据表格 -->
+    <div class="table-wrapper">
+        <table id="salaryTable">
+            <thead><tr><th>姓名</th><th>性别</th><th>单量(单)</th><th>收益(元)</th><th>提成(元)</th><th>操作</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="6">加载中...</td></tr></tbody>
+            <tfoot id="tableFoot" style="display: none;"></tfoot>
+        </table>
+    </div>
+    <div class="footer-note">
+        💰 提成规则：提成 = 单量基数×单量 + 收益基数×收益（女：单量0.035，收益4%；男：单量0.06，收益4%）。<br>
+        📊 平均提成说明：只统计提成 ≥ 20元的员工。总平均提成额外排除：佩佩、客服小蔡、小何、般若、侯总。<br>
+        📎 导入模板包含“发货人”和“合计费用”列，系统将自动统计每个发货人的订单数量与总收益，并自动添加新员工。
+    </div>
+</div>
+
+<script>
+    // ---------- 最新提成系数 ----------
+    const COMM_RATE = {
+        '女': { qtyRate: 0.035, revenueRate: 0.04 },   // 女孩子：单量0.035元/单，收益4%
+        '男': { qtyRate: 0.06, revenueRate: 0.04 }      // 男孩子：单量0.06元/单，收益4%
+    };
+
+    function normalizeGender(genderStr) {
+        if (!genderStr) return null;
+        const g = String(genderStr).trim();
+        if (g === '女' || g === '女孩子' || g === '女生' || g === 'female' || g === 'Girl') return '女';
+        if (g === '男' || g === '男孩子' || g === '男生' || g === 'male' || g === 'Boy') return '男';
+        return null;
+    }
+
+    function calculateCommission(gender, qty, revenue) {
+        const norm = normalizeGender(gender);
+        if (!norm) return 0;
+        const rate = COMM_RATE[norm];
+        const qtyNum = parseFloat(qty) || 0;
+        const revNum = parseFloat(revenue) || 0;
+        const commission = (qtyNum * rate.qtyRate) + (revNum * rate.revenueRate);
+        return Math.round(commission * 100) / 100;
+    }
+
+    // ---------- 预设员工数据 ----------
+    const PRESET_BOYS = ['阿灿', '阿森', '阿远', '小成', '小飞', '曹平', '陈武', '肖尊伟'];
+    const PRESET_GIRLS = ['坜坜', '旺仔', '小杨', '操作小陈', '操作乐乐', '操作欣欣', '客服小蔡', '佩佩', '般若'];
+
+    let employees = [];
+    let nextEmpId = 1;
+    let commissionMap = new Map(); // key: employeeId, value: { qty, revenue, commission }
+
+    // 初始化预设员工
+    function initPresetEmployees() {
+        for (let name of PRESET_BOYS) {
+            if (!employees.some(e => e.name === name)) {
+                employees.push({ id: nextEmpId++, name: name, gender: '男' });
+                commissionMap.set(employees[employees.length-1].id, { qty: 0, revenue: 0, commission: 0 });
+            }
+        }
+        for (let name of PRESET_GIRLS) {
+            if (!employees.some(e => e.name === name)) {
+                employees.push({ id: nextEmpId++, name: name, gender: '女' });
+                commissionMap.set(employees[employees.length-1].id, { qty: 0, revenue: 0, commission: 0 });
+            }
+        }
+    }
+
+    function recalcCommission(empId) {
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
+        const data = commissionMap.get(empId) || { qty: 0, revenue: 0 };
+        const commission = calculateCommission(emp.gender, data.qty, data.revenue);
+        commissionMap.set(empId, { qty: data.qty, revenue: data.revenue, commission: commission });
+    }
+
+    function recalcAllCommissions() {
+        for (let emp of employees) recalcCommission(emp.id);
+        renderEmployeeList();
+        renderCommissionTable();
+        updateWarehouseStats();
+        updateAverageCommissions();
+    }
+
+    function updateWarehouseStats() {
+        let totalQty = 0, totalRevenue = 0, totalCommission = 0;
+        for (let emp of employees) {
+            const data = commissionMap.get(emp.id) || { qty: 0, revenue: 0, commission: 0 };
+            totalQty += data.qty;
+            totalRevenue += data.revenue;
+            totalCommission += data.commission;
+        }
+        document.getElementById('totalQty').innerText = totalQty.toLocaleString();
+        document.getElementById('totalRevenue').innerText = totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('totalCommissionStat').innerText = totalCommission.toFixed(2);
+    }
+
+    // 计算平均提成（排除提成低于20元的员工）
+    function updateAverageCommissions() {
+        // 女孩子：只统计提成 >= 20
+        let girlCommissions = [];
+        // 男孩子：只统计提成 >= 20
+        let boyCommissions = [];
+        // 总平均：排除指定名单 + 提成 >= 20
+        let totalExcludeCommissions = [];
+        const excludeNames = ['佩佩', '客服小蔡', '小何', '般若', '侯总'];
+
+        for (let emp of employees) {
+            const data = commissionMap.get(emp.id) || { qty: 0, revenue: 0, commission: 0 };
+            const commission = data.commission;
+            if (commission >= 20) {
+                if (emp.gender === '女') {
+                    girlCommissions.push(commission);
+                } else {
+                    boyCommissions.push(commission);
+                }
+                // 总平均排除指定人员
+                if (!excludeNames.includes(emp.name)) {
+                    totalExcludeCommissions.push(commission);
+                }
+            }
+        }
+
+        const avgGirl = girlCommissions.length ? (girlCommissions.reduce((a,b)=>a+b,0) / girlCommissions.length) : 0;
+        const avgBoy = boyCommissions.length ? (boyCommissions.reduce((a,b)=>a+b,0) / boyCommissions.length) : 0;
+        const avgTotalExclude = totalExcludeCommissions.length ? (totalExcludeCommissions.reduce((a,b)=>a+b,0) / totalExcludeCommissions.length) : 0;
+
+        document.getElementById('avgGirlCommission').innerText = avgGirl.toFixed(2);
+        document.getElementById('avgBoyCommission').innerText = avgBoy.toFixed(2);
+        document.getElementById('avgTotalExclude').innerText = avgTotalExclude.toFixed(2);
+    }
+
+    function renderEmployeeList() {
+        const tbody = document.getElementById('employeeListBody');
+        const select = document.getElementById('manualEmployeeSelect');
+        if (!employees.length) {
+            tbody.innerHTML = '<tr><td colspan="3">暂无员工，请添加</td></tr>';
+            select.innerHTML = '<option disabled>请先添加员工</option>';
+            return;
+        }
+        let rows = '';
+        employees.forEach(emp => {
+            rows += `
+                <tr>
+                    <td>${escapeHtml(emp.name)}</td>
+                    <td>
+                        <select class="gender-select-emp" data-id="${emp.id}" style="padding:2px 6px;">
+                            <option value="女" ${emp.gender === '女' ? 'selected' : ''}>女</option>
+                            <option value="男" ${emp.gender === '男' ? 'selected' : ''}>男</option>
+                        </select>
+                     </td>
+                    <td><button class="employee-delete" data-id="${emp.id}" title="删除员工">✖️</button></td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = rows;
+        document.querySelectorAll('.gender-select-emp').forEach(sel => {
+            sel.removeEventListener('change', handleEmpGenderChange);
+            sel.addEventListener('change', handleEmpGenderChange);
+        });
+        document.querySelectorAll('.employee-delete').forEach(btn => {
+            btn.removeEventListener('click', handleDeleteEmployee);
+            btn.addEventListener('click', handleDeleteEmployee);
+        });
+
+        let options = '<option value="">-- 选择员工 --</option>';
+        employees.forEach(emp => {
+            options += `<option value="${emp.id}">${escapeHtml(emp.name)} (${emp.gender})</option>`;
+        });
+        select.innerHTML = options;
+    }
+
+    function handleEmpGenderChange(e) {
+        const empId = parseInt(e.currentTarget.getAttribute('data-id'));
+        const newGender = e.currentTarget.value;
+        const emp = employees.find(e => e.id === empId);
+        if (emp && emp.gender !== newGender) {
+            emp.gender = newGender;
+            recalcCommission(empId);
+            renderEmployeeList();
+            renderCommissionTable();
+            updateWarehouseStats();
+            updateAverageCommissions();
+        }
+    }
+
+    function handleDeleteEmployee(e) {
+        const empId = parseInt(e.currentTarget.getAttribute('data-id'));
+        if (confirm(`确定删除员工吗？相关提成数据也会清除。`)) {
+            employees = employees.filter(e => e.id !== empId);
+            commissionMap.delete(empId);
+            renderEmployeeList();
+            renderCommissionTable();
+            updateWarehouseStats();
+            updateAverageCommissions();
+        }
+    }
+
+    function addEmployee() {
+        const name = document.getElementById('empName').value.trim();
+        const gender = document.getElementById('empGender').value;
+        if (!name) { alert('请输入姓名'); return; }
+        if (employees.some(e => e.name === name)) { alert('员工已存在'); return; }
+        const newEmp = { id: nextEmpId++, name: name, gender: gender };
+        employees.push(newEmp);
+        commissionMap.set(newEmp.id, { qty: 0, revenue: 0, commission: 0 });
+        renderEmployeeList();
+        renderCommissionTable();
+        updateWarehouseStats();
+        updateAverageCommissions();
+        document.getElementById('empName').value = '';
+    }
+
+    function renderCommissionTable() {
+        const tbody = document.getElementById('tableBody');
+        const tfoot = document.getElementById('tableFoot');
+        if (employees.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">暂无员工数据</td></tr>';
+            tfoot.style.display = 'none';
+            return;
+        }
+        let hasData = false;
+        let rowsHtml = '';
+        let totalCommission = 0;
+        for (let emp of employees) {
+            const data = commissionMap.get(emp.id) || { qty: 0, revenue: 0, commission: 0 };
+            if (data.qty > 0 || data.revenue > 0) hasData = true;
+            totalCommission += data.commission;
+            rowsHtml += `
+                <tr data-id="${emp.id}">
+                    <td>${escapeHtml(emp.name)}</td>
+                    <td>${emp.gender === '女' ? '女' : '男'}</td>
+                    <td>${data.qty.toLocaleString()}</td>
+                    <td>${data.revenue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td style="font-weight:600; color:#0f3b5c;">${data.commission.toFixed(2)}</td>
+                    <td><button class="clear-employee-data" data-id="${emp.id}" title="清空该员工提成数据">🗑️</button></td>
+                </tr>
+            `;
+        }
+        if (!hasData) {
+            tbody.innerHTML = '<tr><td colspan="6">暂无提成数据，请导入订单或手动累加</td></tr>';
+            tfoot.style.display = 'none';
+            return;
+        }
+        tbody.innerHTML = rowsHtml;
+        tfoot.style.display = 'table-footer-group';
+        tfoot.innerHTML = `
+            <tr class="total-row">
+                <td colspan="4" style="text-align:right; font-weight:700;">📊 合计提成: </td>
+                <td style="font-weight:700; background:#fef3c7;">${totalCommission.toFixed(2)} 元</td>
+                <td></td>
+            </tr>
+        `;
+        document.querySelectorAll('.clear-employee-data').forEach(btn => {
+            btn.removeEventListener('click', handleClearEmployeeData);
+            btn.addEventListener('click', handleClearEmployeeData);
+        });
+    }
+
+    function handleClearEmployeeData(e) {
+        const empId = parseInt(e.currentTarget.getAttribute('data-id'));
+        if (confirm('清空该员工的单量和收益吗？')) {
+            commissionMap.set(empId, { qty: 0, revenue: 0, commission: 0 });
+            renderCommissionTable();
+            updateWarehouseStats();
+            updateAverageCommissions();
+        }
+    }
+
+    function addToEmployee(empId, qtyAdd, revenueAdd) {
+        const emp = employees.find(e => e.id === empId);
+        if (!emp) return;
+        let data = commissionMap.get(empId) || { qty: 0, revenue: 0 };
+        data.qty += qtyAdd;
+        data.revenue += revenueAdd;
+        const commission = calculateCommission(emp.gender, data.qty, data.revenue);
+        commissionMap.set(empId, { qty: data.qty, revenue: data.revenue, commission: commission });
+        renderCommissionTable();
+        updateWarehouseStats();
+        updateAverageCommissions();
+    }
+
+    // ---------- Excel 导入 ----------
+    function aggregateByShipperAndAdd(rows, shipperCol, revenueCol) {
+        const tempMap = new Map();
+        for (let row of rows) {
+            let shipper = row[shipperCol] ? String(row[shipperCol]).trim() : null;
+            if (!shipper) continue;
+            let revenue = parseFloat(row[revenueCol]);
+            if (isNaN(revenue)) revenue = 0;
+            if (tempMap.has(shipper)) {
+                const existing = tempMap.get(shipper);
+                existing.qty += 1;
+                existing.revenue += revenue;
+            } else {
+                tempMap.set(shipper, { qty: 1, revenue: revenue });
+            }
+        }
+        const results = [];
+        const newNames = [];
+        for (let [shipper, agg] of tempMap.entries()) {
+            let emp = employees.find(e => e.name === shipper);
+            if (!emp) {
+                const newEmp = { id: nextEmpId++, name: shipper, gender: '女' };
+                employees.push(newEmp);
+                commissionMap.set(newEmp.id, { qty: 0, revenue: 0, commission: 0 });
+                emp = newEmp;
+                newNames.push(shipper);
+            }
+            results.push({ empId: emp.id, qty: agg.qty, revenue: agg.revenue });
+        }
+        return { results, newNames };
+    }
+
+    function importExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                let rows = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+                if (!rows || rows.length === 0) throw new Error('表格为空');
+
+                const keys = Object.keys(rows[0]);
+                let shipperCol = null, revenueCol = null;
+                const shipperKw = ['发货人', '姓名', '名字', '贴单员', 'name'];
+                const revenueKw = ['合计费用', '收益', '收入', '金额', 'revenue', 'income', '总费用'];
+                for (let key of keys) {
+                    const low = String(key).toLowerCase();
+                    if (!shipperCol && shipperKw.some(kw => low.includes(kw) || low === kw)) shipperCol = key;
+                    if (!revenueCol && revenueKw.some(kw => low.includes(kw) || low === kw)) revenueCol = key;
+                }
+                if (!shipperCol) shipperCol = keys[0];
+                if (!revenueCol) revenueCol = keys[1];
+                if (!shipperCol || !revenueCol) throw new Error('无法识别“发货人”或“合计费用”列');
+
+                const { results, newNames } = aggregateByShipperAndAdd(rows, shipperCol, revenueCol);
+                for (let res of results) {
+                    let current = commissionMap.get(res.empId) || { qty: 0, revenue: 0 };
+                    current.qty += res.qty;
+                    current.revenue += res.revenue;
+                    const emp = employees.find(e => e.id === res.empId);
+                    const commission = calculateCommission(emp.gender, current.qty, current.revenue);
+                    commissionMap.set(res.empId, { qty: current.qty, revenue: current.revenue, commission: commission });
+                }
+                renderEmployeeList();
+                renderCommissionTable();
+                updateWarehouseStats();
+                updateAverageCommissions();
+
+                let msg = `✅ 成功导入并合并 ${results.length} 位员工的订单数据。`;
+                if (newNames.length > 0) {
+                    msg += `\n✨ 自动添加了新员工 (默认性别女)：${newNames.join(', ')}\n可随时在左侧修改性别。`;
+                }
+                alert(msg);
+            } catch (err) {
+                alert(`❌ 导入失败: ${err.message}\n请确保表格包含“发货人”和“合计费用”列。`);
+                console.error(err);
+            }
+        };
+        reader.onerror = () => alert('文件读取失败');
+        reader.readAsArrayBuffer(file);
+    }
+
+    function exportToExcel() {
+        if (employees.length === 0) { alert('无数据可导出'); return; }
+        const exportRows = [];
+        for (let emp of employees) {
+            const data = commissionMap.get(emp.id) || { qty: 0, revenue: 0, commission: 0 };
+            exportRows.push({
+                '姓名': emp.name,
+                '性别': emp.gender,
+                '单量(单)': data.qty,
+                '收益(元)': data.revenue,
+                '提成(元)': data.commission
+            });
+        }
+        const totalCommission = exportRows.reduce((s, r) => s + r['提成(元)'], 0);
+        exportRows.push({ '姓名': '【合计】', '性别': '', '单量(单)': '', '收益(元)': '', '提成(元)': totalCommission.toFixed(2) });
+        const ws = XLSX.utils.json_to_sheet(exportRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '员工提成报表');
+        ws['!cols'] = [{wch:12},{wch:8},{wch:12},{wch:14},{wch:12}];
+        XLSX.writeFile(wb, `提成数据_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+    }
+
+    function downloadTemplate() {
+        const data = [
+            { '发货人': '阿远', '合计费用': 1450 },
+            { '发货人': '肖尊伟', '合计费用': 2600 },
+            { '发货人': '新员工示例', '合计费用': 500 }
+        ];
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '订单导入模板');
+        XLSX.writeFile(wb, '提成导入模板.xlsx');
+    }
+
+    function clearAllCommissionData() {
+        if (confirm('清空所有员工的提成数据（单量、收益）吗？员工信息保留。')) {
+            for (let emp of employees) {
+                commissionMap.set(emp.id, { qty: 0, revenue: 0, commission: 0 });
+            }
+            renderCommissionTable();
+            updateWarehouseStats();
+            updateAverageCommissions();
+        }
+    }
+
+    function manualAdd() {
+        const empId = parseInt(document.getElementById('manualEmployeeSelect').value);
+        if (isNaN(empId) || !employees.find(e => e.id === empId)) { alert('请选择员工'); return; }
+        let qty = parseFloat(document.getElementById('manualQty').value);
+        let revenue = parseFloat(document.getElementById('manualRevenue').value);
+        if (isNaN(qty)) qty = 0;
+        if (isNaN(revenue)) revenue = 0;
+        if (qty === 0 && revenue === 0) { alert('请输入单量或收益'); return; }
+        addToEmployee(empId, qty, revenue);
+        document.getElementById('manualQty').value = '0';
+        document.getElementById('manualRevenue').value = '0';
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function init() {
+        initPresetEmployees();
+        renderEmployeeList();
+        renderCommissionTable();
+        updateWarehouseStats();
+        updateAverageCommissions();
+    }
+
+    // 事件绑定
+    document.getElementById('addEmployeeBtn').addEventListener('click', addEmployee);
+    document.getElementById('uploadExcel').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) importExcel(file);
+        this.value = '';
+    });
+    document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+    document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
+    document.getElementById('clearDataBtn').addEventListener('click', clearAllCommissionData);
+    document.getElementById('addManualBtn').addEventListener('click', manualAdd);
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
